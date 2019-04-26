@@ -3,6 +3,7 @@ library(tidyverse)
 library(ggplot2)
 library(lubridate)
 library(ggrepel)
+library(ggparliament)
 
 
 # Importing the data
@@ -27,5 +28,48 @@ gm_last %>%
     xlab("PIB per Cápita") + ylab("Esperanza de Vida al Nacer")
 
 
+# Parliament Plots
+gm_last$votes_per_pop <-  round(sum(gm_last$poblacion),0)
+gm_last$votes_per_country <- (gm_last$poblacion / gm_last$votes_per_pop)
 
+# Creating new Global areas
+gm_last <- gm_last %>%
+              mutate(continente = case_when(pais == "Japón" ~ "Japón",
+                                            pais == "China" ~ "China",
+                                            pais == "India" ~ "India",
+                                            pais == c("Argentina","Chile","Uruguay","Brasil","Paraguay","Bolivia","Perú","Ecuador","Colombia","Venezuela","Panamá","Cuba","México","Costa Rica","Guatemala","Honduras","Nicaragüa","Belice") ~ "LatinoAmérica",
+                                            pais == c("",) ~ "Europa Occidental",
+                                            pais == c("",) ~ "Europa Oriental",
+                                            
+                                            
+                                            TRUE ~ continente
+                                            ))
 
+# By Population
+world_parliament <- gm_last %>%
+                        group_by(continente) %>%
+                        summarise(seats = round(sum(votes_per_country) * 250),0) %>%
+                        data.frame()
+  
+parliament <- parliament_data(election_data = world_parliament,
+                              type = "semicircle",
+                              parl_rows = 10,
+                              party_seats = world_parliament$seats)
+
+# Plotting Parliament seats by Continent
+w_rep <-ggplot(parliament, aes(x, y, colour = continente)) +
+  geom_parliament_seats(size = 4) + 
+  #geom_highlight_government(continente == "Asia", colour = "pink", size = 4) + 
+  draw_majoritythreshold(n = 126, 
+                         label = TRUE, 
+                         linesize = 0.5,
+                         type = 'semicircle') + 
+  theme_ggparliament() +
+  theme(legend.position = 'bottom') + 
+  labs(colour = NULL,
+       title = "Global Parliament",
+       subtitle = "As population in 2007")# +
+  #scale_colour_manual(values = parliament$continente, 
+  #                    limits = parliament$continente) 
+
+w_rep
